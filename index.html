@@ -1,0 +1,545 @@
+<html>
+	<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<title>Sudoku emulator</title>
+	<script>
+
+var missingValues = 10;
+
+// we start with an empty sudoku...
+function SudokuEmpty(){
+	return new Array(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
+}
+
+//Create a new sudoku from scratch 
+function Createsudoku(sudoku,possible)
+{
+	for(var row=0;row < 9;row++ )
+	{
+		for(var col = 0;col<9;col++)
+		{
+			if(sudoku[row * 9 + col] == 0)
+			{
+				//Find all possible values for this field in this branch
+				possible[row * 9 + col] = FindPossibleValue(sudoku,col,row);
+				while(true)
+				{
+					var lenght = possible[row * 9 + col].length;
+					if(lenght != 'undefined' && lenght > 0)
+					{
+						sudoku[row * 9 + col] = FindRandomValue(possible[row * 9 + col]);
+						if(!Createsudoku(sudoku,possible))
+						{
+							//Backtrack branch
+							possible[row * 9 + col].splice(possible[row * 9 + col].indexOf(sudoku[row * 9 + col]),1);
+							sudoku[row * 9 + col] = 0; 
+						}
+						else
+							return true;
+					}
+					else
+						return false;//Branch failed
+				}
+			}			
+		}
+	}
+	return true;//All fields filled
+}
+
+//Find one random value from possible values 
+function FindRandomValue(possibleval)
+{
+	Selected = Math.floor(Math.random() * possibleval.length);
+	return possibleval[Selected];
+}
+
+//Find all possible values for a specific place
+function FindPossibleValue(sudoku,col,row)
+{
+	possiblevalues = [];
+	var lenght = possiblevalues.lenght;
+	for(val = 1;val <= 9;val++)
+	{
+		if(isPossible(sudoku,col,row,val)) 
+			possiblevalues.push(val);
+	}
+	return possiblevalues;
+}
+
+//Test if a value is alowed in a specific place
+function isPossible(sudoku,col,row,value)
+{
+	if(value >9 || value < 1)
+		return false;
+
+	//Test row
+	for(a=0;a<9;a++)
+		if(col != a && sudoku[row * 9 +a] == value)
+			return false;
+	//Test colomn
+	for(a=0;a<9;a++)
+		if(row != a && sudoku[a * 9 + col] == value)
+			return false;
+
+	//Test square
+	sqrow = Math.floor(row/3);
+	sqcol = Math.floor(col/3);
+	for(a=0;a < 3;a++ )
+    {
+		for(b=0;b < 3;b++ )
+		{
+			var field = (((sqrow * 3) + a)  * 9)+ (sqcol * 3) + b;
+			if((row * 9 + col) != field && sudoku[field] == value)
+				return false;
+		}
+	}
+	return true;
+}
+
+//remove a number of field randomly from the matrix
+function RemoveRandomFields(sudoku, fieldtoremove)
+{
+	removed = 0
+	maxfield = 9*9;
+	remainingfields = maxfield;
+	while(fieldtoremove > 0 || fieldtoremove > remainingfields)
+	{
+		field = Math.floor(Math.random() * remainingfields);
+		
+		for(a = 0;a < maxfield;a++)
+		{
+			if( sudoku[a] > 0)
+			{
+				field--;
+				if(field <= 0)
+				{
+					sudoku[a] = 0; //remove
+					remainingfields--;
+					fieldtoremove--;
+					break;
+				}
+				
+			}	
+		}
+		if(a == maxfield)
+			break;										
+	}
+}
+
+//Test af sudoku matrix
+function Testsoduko(soduko)
+{
+	for(var row=0;row < 9;row++ )
+	{
+		for(var col = 0;col<9;col++)
+		{
+			if(!isPossible(sudoku,col,row,sudoku[row * 9 + col]))
+				return false;
+		}
+	}
+	return true;
+}	
+
+//Create a sudoku matrix mith missing values
+function FillSudoku()
+{
+	var sudoku = SudokuEmpty();
+	var possibleval = SudokuEmpty();
+	Createsudoku(sudoku,possibleval);
+	RemoveRandomFields(sudoku,missingValues);
+	RemoveClass('selected');
+	showSudoku(sudoku);	
+}
+
+// given a solved sudoku and the number of steps, prints out the sudoku
+function showSudoku(sudoku) {
+	for(var row=0;row < 9;row++ )
+	{
+		for(var col = 0;col<9;col++)
+		{		
+			idstring = CreateIdString(col,row);
+			if(sudoku[row*9+col] > 0 )
+			{
+				document.getElementById(idstring).innerHTML = sudoku[row*9+col];
+				document.getElementById(idstring).classList.remove('editable');
+			}
+			else
+			{
+				document.getElementById(idstring).classList.add('editable');
+				document.getElementById(idstring).innerHTML = '-';
+			}
+		}
+	}
+}
+
+//Identify blocks by Column and row  
+function CreateIdString(col,row)
+{
+	return 'col' + (col+1) + '_row' + (row+1);
+}
+
+//Get input from keyboard
+function Keyboardinput(e)
+{
+	if(parseInt(e.key) > 0 && parseInt(e.key) <= 9 )
+		InservalueInSelected(e.key);
+}
+
+//Write value to selected block
+function InservalueInSelected(value)
+{
+	document.getElementsByClassName('selected')[0].innerHTML = value;
+}
+
+//Number butten clicked
+function keybutton()
+{
+	InservalueInSelected(parseInt(this.innerHTML));
+}
+
+//Click the check soduko
+function CheckSudokuClick()
+{
+	sudoku = SudokuEmpty(); 
+	for(var row=0;row < 9;row++ )
+	{
+		for(var col = 0;col<9;col++)
+		{
+			idstring = CreateIdString(col,row)
+			Value = parseInt(document.getElementById(idstring).innerHTML);
+			if (Value > 0)
+				sudoku[row*9+col] = Value; 		
+		}
+	}
+	if(Testsoduko(sudoku))
+		document.getElementById('solverbutton').style.backgroundColor = 'green';
+	else
+		document.getElementById('solverbutton').style.backgroundColor = 'red';
+}
+
+//Block clicked for selection
+function SelectBlock()
+{
+	//test if Clicked block is editable
+	if(this.classList.contains('editable'))
+	{
+		//remove selection from other blocks
+		RemoveClass('selected');
+		this.classList.add('selected'); //Select block
+	}
+}
+
+function RemoveClass(className)
+{
+	var elms = document.getElementsByClassName(className);
+	for(var i = 0; i < elms.length; i++)
+		elms[i].classList.remove(className); 
+}	
+
+function SetlevelClick()
+{
+	//remove selection from other level buttons
+	RemoveClass('Levelselected');
+	missingValues = this.getAttribute('id');
+	this.classList.add('Levelselected'); //Select block
+	
+}
+
+//Setup click events
+function setupevents()
+{
+	//Keybard click event
+	document.addEventListener('keydown', Keyboardinput);
+
+	//Event when editable field is clicked
+	var elms = document.getElementsByClassName('block');
+	for(var i = 0; i < elms.length; i++)
+		elms[i].addEventListener('click', SelectBlock, false);
+
+	//Event for number buttons clicked
+	var elms = document.getElementsByClassName('Keynum');
+	for (var i = 0; i < elms.length; i++)
+		elms[i].addEventListener('click', keybutton, false);
+
+	//Event for level buttons clicked
+	var elms = document.getElementsByClassName('level');
+	for (var i = 0; i < elms.length; i++)
+		elms[i].addEventListener('click', SetlevelClick, false);
+
+}
+
+
+//Run javascript when page is loaded
+window.onload = function() {
+	FillSudoku();
+	setupevents();
+};
+
+</script>
+	
+	
+<style>
+
+div.quadr{
+	height :150px;
+	border: 2px solid black;	
+	display: table-cell;
+}
+
+div.quadrow{
+	height :150px;
+	display: table-row;
+}
+
+div.block{
+	width: 50px;
+	height :50px;
+	display: table-cell;
+	border: 1px solid black;
+	border-color:black;
+	text-align: center;
+	vertical-align: middle;
+	font-weight: bold;
+	font-family: Arial;
+}
+
+div.qrow{
+	display: table-row;
+	background-color:powderblue;
+	height:50px;
+	width:150px
+}
+
+div.editable{
+	color : blue;
+	background-color:CadetBlue;
+
+}
+div.selected{
+	background-color:green;
+}
+
+
+button{	
+	height:25px;
+	width:100px;
+}
+div.container{
+	margin: auto;
+	width: 50%;
+}
+div.buttoncontainer{
+	height:30px; 
+	width:500px; 
+}
+div.dvbutton
+{
+	width : 138px;
+	height : 20px;
+	display: inline-block;
+	background-color:lime;
+	margin : 8px;
+	border: 1px solid black;
+	border-color:black;
+	text-align: center;
+	font-weight: bold;
+	font-family: Arial;
+}
+
+
+div.Levelselected{
+	background-color:green;
+}
+</style>
+
+</head>
+	<body>
+			
+		<div style="margin-top:50px" class="container" id="playgrid" >
+			<div class="space" style="height:25px;" ></div>
+			<div class="quadrow">
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col1_row1" >-</div>
+					<div class="block" id="col2_row1" >-</div>
+					<div class="block" id="col3_row1" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col1_row2" >-</div>
+					<div class="block" id="col2_row2" >-</div>
+					<div class="block" id="col3_row2" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col1_row3" >-</div>
+					<div class="block" id="col2_row3" >-</div>
+					<div class="block" id="col3_row3" >-</div>
+					</div>
+				</div>
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col4_row1" >-</div>
+					<div class="block" id="col5_row1" >-</div>
+					<div class="block" id="col6_row1" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col4_row2" >-</div>
+					<div class="block" id="col5_row2" >-</div>
+					<div class="block" id="col6_row2" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col4_row3" >-</div>
+					<div class="block" id="col5_row3" >-</div>
+					<div class="block" id="col6_row3" >-</div>
+					</div>
+				</div>
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col7_row1" >-</div>
+					<div class="block" id="col8_row1" >-</div>
+					<div class="block" id="col9_row1" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col7_row2" >-</div>
+					<div class="block" id="col8_row2" >-</div>
+					<div class="block" id="col9_row2" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col7_row3" >-</div>
+					<div class="block" id="col8_row3" >-</div>
+					<div class="block" id="col9_row3" >-</div>
+					</div>
+				</div>
+			</div>
+			<div class="quadrow">
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col1_row4" >-</div>
+					<div class="block" id="col2_row4" >-</div>
+					<div class="block" id="col3_row4" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col1_row5" >-</div>
+					<div class="block" id="col2_row5" >-</div>
+					<div class="block" id="col3_row5" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col1_row6" >-</div>
+					<div class="block" id="col2_row6" >-</div>
+					<div class="block" id="col3_row6" >-</div>
+					</div>
+				</div>
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col4_row4" >-</div>
+					<div class="block" id="col5_row4" >-</div>
+					<div class="block" id="col6_row4" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col4_row5" >-</div>
+					<div class="block" id="col5_row5" >-</div>
+					<div class="block" id="col6_row5" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col4_row6" >-</div>
+					<div class="block" id="col5_row6" >-</div>
+					<div class="block" id="col6_row6" >-</div>
+					</div>
+				</div>
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col7_row4" >-</div>
+					<div class="block" id="col8_row4" >-</div>
+					<div class="block" id="col9_row4" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col7_row5" >-</div>
+					<div class="block" id="col8_row5" >-</div>
+					<div class="block" id="col9_row5" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col7_row6" >-</div>
+					<div class="block" id="col8_row6" >-</div>
+					<div class="block" id="col9_row6" >-</div>
+					</div>
+				</div>
+			</div>
+			<div class="quadrow">
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col1_row7" >-</div>
+					<div class="block" id="col2_row7" >-</div>
+					<div class="block" id="col3_row7" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col1_row8" >-</div>
+					<div class="block" id="col2_row8" >-</div>
+					<div class="block" id="col3_row8" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col1_row9" >-</div>
+					<div class="block" id="col2_row9" >-</div>
+					<div class="block" id="col3_row9" >-</div>
+					</div>
+				</div>
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col4_row7" >-</div>
+					<div class="block" id="col5_row7" >-</div>
+					<div class="block" id="col6_row7" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col4_row8" >-</div>
+					<div class="block" id="col5_row8" >-</div>
+					<div class="block" id="col6_row8" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col4_row9" >-</div>
+					<div class="block" id="col5_row9" >-</div>
+					<div class="block" id="col6_row9" >-</div>
+					</div>
+				</div>
+				<div class="quadr">
+					<div class="qrow" >
+					<div class="block" id="col7_row7" >-</div>
+					<div class="block" id="col8_row7" >-</div>
+					<div class="block" id="col9_row7" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col7_row8" >-</div>
+					<div class="block" id="col8_row8" >-</div>
+					<div class="block" id="col9_row8" >-</div>
+					</div>
+					<div class="qrow" >
+					<div class="block" id="col7_row9" >-</div>
+					<div class="block" id="col8_row9" >-</div>
+					<div class="block" id="col9_row9" >-</div>
+					</div>
+				</div>
+			</div>
+			<div class="space" style="height:25px" >Select value to insert in sudoku</div>
+			<div class="grow" id="space">
+				<div class="block Keynum">1</div>
+				<div class="block Keynum">2</div>
+				<div class="block Keynum">3</div>
+				<div class="block Keynum">4</div>
+				<div class="block Keynum">5</div>
+				<div class="block Keynum">6</div>
+				<div class="block Keynum">7</div>
+				<div class="block Keynum">8</div>
+				<div class="block Keynum">9</div>
+			</div>
+			<div class="space" style="height:20px;" >Select level and press shuffle</div>
+			<div class="buttoncontainer" style="" >			
+				<div class="level dvbutton" id="10">Easy</div>
+				<div class="level dvbutton" id="15">medium</div>
+				<div class="level dvbutton" id="20">Hard</div>
+			</div>
+			<div class="space" style="height:10px;" ></div>
+			<div class="buttoncontainer" style="" >			
+				<div class="dvbutton" onclick="CheckSudokuClick()">Test sudoku</div>
+				<div class="dvbutton" onclick="FillSudoku()">Shuffle sudoku</div>
+			</div>
+		</div>
+	</body>
+</html>
